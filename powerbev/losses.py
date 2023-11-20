@@ -85,3 +85,49 @@ class SegmentationLoss(nn.Module):
             loss = loss[:, :, :k]
 
         return torch.mean(loss)
+    
+backwarp_tenGrid = {}
+backwarp_tenPartial = {}
+
+def warp(im, flow, device='cuda'):
+    """
+    This function warps an image using 'flow'
+
+    im: tensor of shape (N, C, W, H)
+    flow: tensor of shape (N, 2, W, H)
+    """
+    if str(flow.size()) not in backwarp_tenGrid:
+        tenHorizontal = torch.linspace(-1.0, 1.0, flow.shape[3]).view(1, 1, 1, flow.shape[3]).expand(flow.shape[0], -1, flow.shape[2], -1)
+        tenVertical = torch.linspace(-1.0, 1.0, flow.shape[2]).view(1, 1, flow.shape[2], 1).expand(flow.shape[0], -1, -1, flow.shape[3])
+        backwarp_tenGrid[str(flow.size())] = torch.cat([ tenHorizontal, tenVertical ], 1).to(device)
+
+    if str(flow.size()) not in backwarp_tenPartial:
+        backwarp_tenPartial[str(flow.size())] = flow.new_ones([ flow.shape[0], 1, flow.shape[2], flow.shape[3] ])
+
+    # flow is supplied with pixel units, to use grid_sample we scale flow to [-1, 1]
+    flow = torch.cat([ flow[:, 0:1, :, :] / ((im.shape[3] - 1.0) / 2.0), flow[:, 1:2, :, :] / ((im.shape[2] - 1.0) / 2.0) ], 1)
+    im = torch.cat([ im, backwarp_tenPartial[str(flow.size())] ], 1)
+
+    grid = (backwarp_tenGrid[str(flow.size())] + flow).permute(0, 2, 3, 1)
+
+    out = F.grid_sample(input=im, grid=grid, mode='bilinear', padding_mode='zeros', align_corners=False)
+
+    mask = out[:, -1:, :, :]
+    mask[mask > 0.999] = 1.0
+    mask[mask < 1.0] = 0.0
+
+    return (out[:, :-1, :, :] * mask).contiguous()
+
+class SelfSupervisedLoss(torch.nn.Module):
+    def __init__(self):
+        super(SelfSupervisedLoss, self).__init__()
+        self.loss_fn = torch.nn.MSELoss()
+
+    def forward(self, pred):
+        warpped_feature_map = []
+        forward_loss = 0
+        for i in range(1, 3):
+            warpped_feature_map = warp(pred['raw_bev_feat'][:, i], pred['instance_flow'][:, i])
+            forward_loss += self.loss_fn(pred['raw_bev_feat'][:, i - 1], warpped_feature_map)
+
+        return forward_loss

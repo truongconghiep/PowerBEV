@@ -12,7 +12,7 @@ import pytorch_lightning as pl
 import torch
 import torch.nn as nn
 from powerbev.config import get_cfg
-from powerbev.losses import SegmentationLoss, SpatialRegressionLoss
+from powerbev.losses import SegmentationLoss, SpatialRegressionLoss, SelfSupervisedLoss
 from powerbev.metrics import IntersectionOverUnion, PanopticMetric
 from powerbev.models.powerbev import PowerBEV
 from powerbev.utils.instance import predict_instance_segmentation
@@ -52,6 +52,8 @@ class TrainingModule(pl.LightningModule):
             future_discount=self.cfg.FUTURE_DISCOUNT, 
             ignore_index=self.cfg.DATASET.IGNORE_INDEX,
         )
+
+        self.losses_fn['SelfSupervisedLoss'] = SelfSupervisedLoss()
 
         # Uncertainty weighting
         self.model.segmentation_weight = nn.Parameter(torch.tensor(0.0), requires_grad=True)
@@ -120,6 +122,8 @@ class TrainingModule(pl.LightningModule):
             labels['flow']
         )
         loss['flow_uncertainty'] = 0.5 * self.model.flow_weight
+
+        loss['self_supervised'] = self.losses_fn['SelfSupervisedLoss'](output)
     
         return loss
 
@@ -176,7 +180,7 @@ class TrainingModule(pl.LightningModule):
         
         if self.training_step_count % self.cfg.VIS_INTERVAL == 0:
             self.visualise(labels, output, batch_idx, prefix='train')
-        return sum(loss.values())
+        return loss['self_supervised'] + loss['segmentation'] + loss['segmentation_uncertainty']
 
     def validation_step(self, batch, batch_idx):
         output, labels, loss = self.shared_step(batch, False)

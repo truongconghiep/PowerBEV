@@ -18,6 +18,29 @@ from powerbev.trainer import TrainingModule
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.plugins import DDPPlugin
 
+import torch.nn as nn
+
+
+os.environ['CUDA_DEVICE_ORDER'] = "PCI_BUS_ID"
+
+
+def reset_all_weights(model: nn.Module) -> None:
+    """
+    refs:
+        - https://discuss.pytorch.org/t/how-to-re-set-alll-parameters-in-a-network/20819/6
+        - https://stackoverflow.com/questions/63627997/reset-parameters-of-a-neural-network-in-pytorch
+        - https://pytorch.org/docs/stable/generated/torch.nn.Module.html
+    """
+
+    @torch.no_grad()
+    def weight_reset(m: nn.Module):
+        # - check if the current module has reset_parameters & if it's callabed called it on m
+        reset_parameters = getattr(m, "reset_parameters", None)
+        if callable(reset_parameters):
+            m.reset_parameters()
+
+    # Applies fn recursively to every submodule see: https://pytorch.org/docs/stable/generated/torch.nn.Module.html
+    model.apply(fn=weight_reset)
 
 def main():
     args = get_parser().parse_args()
@@ -34,6 +57,16 @@ def main():
 
         model.load_state_dict(pretrained_model_weights, strict=False)
         print(f'Loaded single-image model weights from {cfg.PRETRAINED.PATH}')
+
+    freeze_modules = ['encoder']
+    for key, parameter in  model.named_parameters():
+        for module_name in freeze_modules:
+            if module_name in key:
+                parameter.requires_grad = False
+
+    
+    reset_all_weights(model.model.stconv)
+
 
     save_dir = os.path.join(
         cfg.LOG_DIR, time.strftime('%d%B%Yat%H:%M:%S%Z') + '_' + socket.gethostname() + '_' + cfg.TAG

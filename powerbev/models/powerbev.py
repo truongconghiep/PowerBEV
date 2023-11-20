@@ -114,6 +114,8 @@ class PowerBEV(nn.Module):
         # Lifting features and project to bird's-eye view
         x = self.calculate_birds_eye_view_features(image, intrinsics, extrinsics)
 
+        output['raw_bev_feat'] = x
+
         # Warp past features to the present's reference frame
         x = cumulative_warp_features(
             x.clone(), future_egomotion,
