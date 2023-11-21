@@ -53,7 +53,7 @@ _C.LOGGING_INTERVAL = 500
 
 _C.PRETRAINED = CN()
 _C.PRETRAINED.LOAD_WEIGHTS = True
-_C.PRETRAINED.PATH = '/home/htruongc/PowerBEV/weights/PowerBEV_long.ckpt'
+_C.PRETRAINED.PATH = 'weights/PowerBEV_long.ckpt'
 
 _C.DATASET = CN()
 _C.DATASET.DATAROOT = './nuscenes/'

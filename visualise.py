@@ -26,6 +26,13 @@ from powerbev.utils.visualisation import (convert_figure_numpy,
                                           generate_instance_colours,
                                           make_contour, plot_instance_map)
 
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot
+fig=matplotlib.pyplot.figure()
+fig.canvas.draw()
+fig.canvas.tostring_argb()
+
 
 def plot_prediction(image, output, cfg):
     if cfg.VISUALIZATION.VIS_GT:
@@ -91,7 +98,7 @@ def plot_prediction(image, output, cfg):
     figure_numpy = convert_figure_numpy(fig)
     plt.close()
     return figure_numpy
-    
+
 
 def visualise():
     args = get_parser().parse_args()
@@ -137,9 +144,9 @@ def visualise():
             # Forward pass
             with torch.no_grad():
                 output = trainer.model(image, intrinsics, extrinsics, future_egomotions)
-            
+
             figure_numpy = plot_prediction(image, output, cfg)
-        
+
         os.makedirs(os.path.join(cfg.VISUALIZATION.OUTPUT_PATH), exist_ok=True)
         output_filename = os.path.join(cfg.VISUALIZATION.OUTPUT_PATH, 'sample_'+str(i)) + '.png'
         Image.fromarray(figure_numpy).save(output_filename)

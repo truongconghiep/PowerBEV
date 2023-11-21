@@ -14,6 +14,19 @@
             "args": [
                 "--config=powerbev/configs/powerbev.yml",
             ]
+        },
+        {
+            "name": "Python: visualize",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/visualise.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "--config=powerbev/configs/powerbev.yml",
+                "PRETRAINED.LOAD_WEIGHTS", "True",
+                "PRETRAINED.PATH", "/home/Workspace/PowerBEV/weights/PowerBEV_long.ckpt"
+            ]
         }
     ]
 }
