@@ -26,8 +26,8 @@ class SpatialRegressionLoss(nn.Module):
             self.loss_fn = F.smooth_l1_loss
         else:
             raise ValueError(f'Expected norm 1 or 2, but got norm={norm}')
-    
-    def forward(self, prediction, target):       
+
+    def forward(self, prediction, target):
         assert len(prediction.shape) == 5, 'Must be a 5D tensor'
         # ignore_index is the same across all channels
         mask = target[:, :, :1] != self.ignore_index
@@ -55,7 +55,7 @@ class SegmentationLoss(nn.Module):
         self.use_top_k = use_top_k
         self.top_k_ratio = top_k_ratio
         self.future_discount = future_discount
-        
+
     def forward(self, prediction, target):
         if target.shape[-3] != 1:
             raise ValueError('segmentation label must be an index-label with channel dimension = 1.')
@@ -70,7 +70,7 @@ class SegmentationLoss(nn.Module):
             reduction='none',
             weight=self.class_weights.to(target.device),
         )
-        
+
         loss = loss.view(b, s, h, w)
 
         future_discounts = self.future_discount ** torch.arange(s, device=loss.device, dtype=loss.dtype)
@@ -85,7 +85,7 @@ class SegmentationLoss(nn.Module):
             loss = loss[:, :, :k]
 
         return torch.mean(loss)
-    
+
 backwarp_tenGrid = {}
 backwarp_tenPartial = {}
 
@@ -127,7 +127,7 @@ class SelfSupervisedLoss(torch.nn.Module):
         warpped_feature_map = []
         forward_loss = 0
         for i in range(1, 3):
-            warpped_feature_map = warp(pred['raw_bev_feat'][:, i], pred['instance_flow'][:, i])
+            warpped_feature_map = warp(pred['raw_bev_feat'][:, i], pred['instance_flow'][:, i - 1])
             forward_loss += self.loss_fn(pred['raw_bev_feat'][:, i - 1], warpped_feature_map)
 
         return forward_loss
