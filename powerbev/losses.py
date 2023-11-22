@@ -125,9 +125,9 @@ class SelfSupervisedLoss(torch.nn.Module):
 
     def forward(self, pred):
         warpped_feature_map = []
-        forward_loss = 0
+        ssl_loss = 0
         for i in range(1, 3):
             warpped_feature_map = warp(pred['raw_bev_feat'][:, i], pred['instance_flow'][:, i - 1])
-            forward_loss += self.loss_fn(pred['raw_bev_feat'][:, i - 1], warpped_feature_map)
+            ssl_loss += self.loss_fn(pred['raw_bev_feat'][:, i - 1], warpped_feature_map)
 
-        return forward_loss
+        return ssl_loss
