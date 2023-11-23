@@ -148,6 +148,8 @@ def get_parser():
     parser.add_argument(
         'opts', help='Modify config options using the command-line', default=None, nargs=argparse.REMAINDER,
     )
+    parser.add_argument('--freeze_encoder', action='store_true', help='Freezing encoder weights')
+    parser.add_argument('--reset_decoder',  action='store_true', help='Reset decoder weights')
     return parser
 
 

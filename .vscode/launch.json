@@ -13,6 +13,7 @@
             "justMyCode": false,
             "args": [
                 "--config=powerbev/configs/powerbev.yml",
+                "--reset_decoder"
             ]
         },
         {

@@ -58,14 +58,15 @@ def main():
         model.load_state_dict(pretrained_model_weights, strict=False)
         print(f'Loaded single-image model weights from {cfg.PRETRAINED.PATH}')
 
-    freeze_modules = ['encoder']
-    for key, parameter in  model.named_parameters():
-        for module_name in freeze_modules:
-            if module_name in key:
-                parameter.requires_grad = False
+    if args.freeze_encoder == True:
+        freeze_modules = ['encoder']
+        for key, parameter in  model.named_parameters():
+            for module_name in freeze_modules:
+                if module_name in key:
+                    parameter.requires_grad = False
 
-    
-    reset_all_weights(model.model.stconv)
+    if args.reset_decoder == True:
+        reset_all_weights(model.model.stconv)
 
 
     save_dir = os.path.join(
