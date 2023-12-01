@@ -30,6 +30,28 @@ from powerbev.utils.instance import \
 from powerbev.utils.lyft_splits import TRAIN_LYFT_INDICES, VAL_LYFT_INDICES
 from pyquaternion import Quaternion
 from scipy.spatial.transform import Rotation as R
+import matplotlib.pyplot as plt
+
+def visualize_flow_vectors(flows, title='flows_gt'):
+    fig, ax = plt.subplots(1, flows.shape[0], figsize=(6 * flows.shape[0], 8))
+
+    for i, flow in enumerate(flows):
+        idx_x = np.arange(flow.shape[1])
+        idx_y = np.arange(flow.shape[2])
+        idx_x, idx_y = np.meshgrid(idx_x, idx_y, indexing='ij')
+
+        # Get the displacement field
+        U = flow[1, :, :]   # the distance between pixels is w.r.t. grid size (e.g., 0.2m)
+        V = flow[0, :, :]
+        ax[i].quiver(idx_y, idx_x, V, U, angles='xy', scale_units='xy', scale=1, color=[1, 0, 0])
+        ax[i].set_xlim(0, flow.shape[1])
+        ax[i].set_ylim(0, flow.shape[2])
+        ax[i].set_aspect('equal')
+        ax[i].title.set_text(f'flow {i}')
+        ax[i].grid(False)
+    #subplot.axis('off')
+    # ax2.scatter(idx_x, idx_x, color='0.5', s=1)
+    plt.savefig(title + '.png')
 
 
 class FuturePredictionDataset(torch.utils.data.Dataset):
@@ -50,8 +72,8 @@ class FuturePredictionDataset(torch.utils.data.Dataset):
         self.sequence_length = cfg.TIME_RECEPTIVE_FIELD + cfg.N_FUTURE_FRAMES
 
         self.scenes = self.get_scenes()
-        self.ixes = self.get_samples()
-        self.indices = self.get_indices()
+        self.ixes = self.get_samples()   # list of all samples (frames)
+        self.indices = self.get_indices()  # sequence of 7 consecutive indices in self.ixes
 
         # Image resizing and cropping
         self.augmentation_parameters = self.get_resizing_and_cropping_parameters()
@@ -388,6 +410,14 @@ class FuturePredictionDataset(torch.utils.data.Dataset):
             flow[timestep, 1, instance_mask] = grid[0, prev_instance_mask].mean(dim=0, keepdim=True).round() - grid[0, instance_mask]
             flow[timestep, 0, instance_mask] = grid[1, prev_instance_mask].mean(dim=0, keepdim=True).round() - grid[1, instance_mask]
 
+            # visualize_flow_vectors(flow[timestep], title='first_flow_gt.png')
+            # plt.cla()
+            # plt.imshow(prev_instance_mask)
+            # plt.savefig('prev_instance_mask.png')
+            # plt.cla()
+            # plt.imshow(instance_mask)
+            # plt.savefig('instance_mask.png')
+
         return flow
     
     def get_flow_label(self, instance_img, instance_map, ignore_index=255):
@@ -395,10 +425,21 @@ class FuturePredictionDataset(torch.utils.data.Dataset):
         Generate the global map of the flow ground truth.
         """
         seq_len, h, w = instance_img.shape
-        flow = ignore_index * torch.ones(seq_len, 2, h, w)
+        flow = torch.zeros(seq_len, 2, h, w)
 
         for token, instance in self.instance_dict.items():
             flow = self.generate_flow(flow, instance_img, instance, instance_map[token])
+        
+        
+        visualize_flow_vectors(flow)
+
+        plt.cla()
+        
+        for i in range(len(instance['timestep'])):
+            plt.imshow(instance_img[i], origin='lower')
+            file_name = f'instance_img_{i}.png'
+            plt.savefig(file_name)
+            plt.cla()
         return flow
 
     def _get_poly_region_in_image(self, instance_annotation, present_egopose):

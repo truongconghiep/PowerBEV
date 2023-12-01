@@ -26,7 +26,7 @@
             "args": [
                 "--config=powerbev/configs/powerbev.yml",
                 "PRETRAINED.LOAD_WEIGHTS", "True",
-                "PRETRAINED.PATH", "/home/Workspace/PowerBEV/weights/PowerBEV_long.ckpt"
+                "PRETRAINED.PATH", "weights/PowerBEV_long.ckpt"
             ]
         }
     ]
